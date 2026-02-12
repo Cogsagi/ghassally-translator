@@ -1,656 +1,467 @@
-import React, { useState } from 'react';
-import { Search, Volume2, RefreshCw, BookOpen } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ghassally Translator - Gnomish Dialect of Khazalid</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
 
-const GhassallyTranslator = () => {
-  const [input, setInput] = useState('');
-  const [currentPhrase, setCurrentPhrase] = useState(null);
-  const [showGrammarGuide, setShowGrammarGuide] = useState(false);
+    <script type="text/babel">
+        const { useState, useEffect } = React;
 
-  // PROPER KHAZALID-BASED LEXICON WITH GHASSALLY DIALECTICAL SHIFTS
-  // Following authentic signifier rules: -az (physical/place), -ak (abstract), -it (verb present), -ed (verb past), -i (plural), etc.
-  
-  const lexicon = {
-    // === PRONOUNS & BASIC GRAMMAR ===
-    'i': { ghassally: 'il', pronunciation: 'eel', notes: 'first person singular' },
-    'you': { ghassally: 'ut', pronunciation: 'oot', notes: 'second person' },
-    'we': { ghassally: 'wen', pronunciation: 'wen', notes: 'first person plural' },
-    'they': { ghassally: 'theyi', pronunciation: 'THAY-ee', notes: 'third person plural' },
-    'he': { ghassally: 'ul', pronunciation: 'ool', notes: 'third person masc' },
-    'she': { ghassally: 'ula', pronunciation: 'OO-lah', notes: 'third person fem' },
-    'it': { ghassally: 'iz', pronunciation: 'iz', notes: 'third person neuter' },
-    
-    // === ARTICLES ===
-    'the': { ghassally: 'a', pronunciation: 'ah', notes: 'definite article (from Khazalid "a")' },
-    'a': { ghassally: 'un', pronunciation: 'un', notes: 'indefinite article' },
-    'an': { ghassally: 'un', pronunciation: 'un', notes: 'indefinite article' },
-    
-    // === TO BE (irregular verb ARM in Khazalid) ===
-    'am': { ghassally: 'armi', pronunciation: 'AR-mee', notes: 'to be, present 1st person' },
-    'is': { ghassally: 'armi', pronunciation: 'AR-mee', notes: 'to be, present 3rd person' },
-    'are': { ghassally: 'armi', pronunciation: 'AR-mee', notes: 'to be, present plural' },
-    'was': { ghassally: 'urzi', pronunciation: 'UR-zee', notes: 'to be, past (from Khazalid "urz")' },
-    'were': { ghassally: 'urzi', pronunciation: 'UR-zee', notes: 'to be, past plural' },
-    'be': { ghassally: 'arma', pronunciation: 'AR-mah', notes: 'to be, infinitive' },
-    
-    // === MODAL & HELPER VERBS ===
-    'will': { ghassally: 'an', pronunciation: 'an', notes: 'future marker (Khazalid "an")' },
-    'would': { ghassally: 'voldi', pronunciation: 'VOL-dee', notes: 'conditional' },
-    'can': { ghassally: 'kanni', pronunciation: 'KAN-nee', notes: 'ability' },
-    'could': { ghassally: 'kannid', pronunciation: 'KAN-nid', notes: 'past ability' },
-    'have': { ghassally: 'havi', pronunciation: 'HAH-vee', notes: 'possession' },
-    'has': { ghassally: 'havi', pronunciation: 'HAH-vee', notes: 'possession 3rd' },
-    'had': { ghassally: 'havid', pronunciation: 'HAH-vid', notes: 'past possession' },
-    
-    // === PREPOSITIONS (Khazalid-based) ===
-    'in': { ghassally: 'a', pronunciation: 'ah', notes: 'within (Khazalid "a")' },
-    'on': { ghassally: 'op', pronunciation: 'op', notes: 'upon' },
-    'at': { ghassally: 'at', pronunciation: 'at', notes: 'location' },
-    'to': { ghassally: 'til', pronunciation: 'til', notes: 'direction' },
-    'for': { ghassally: 'for', pronunciation: 'for', notes: 'purpose' },
-    'of': { ghassally: 'a', pronunciation: 'ah', notes: 'possession (Khazalid "a")' },
-    'with': { ghassally: 'a', pronunciation: 'ah', notes: 'accompaniment (Khazalid "a")' },
-    'from': { ghassally: 'fra', pronunciation: 'frah', notes: 'origin' },
-    'by': { ghassally: 'bi', pronunciation: 'bee', notes: 'agent' },
-    
-    // === CONJUNCTIONS ===
-    'and': { ghassally: 'ok', pronunciation: 'ok', notes: 'conjunction (Khazalid "ok")' },
-    'or': { ghassally: 'bar', pronunciation: 'bar', notes: 'alternative (Khazalid "bar" = but/except)' },
-    'but': { ghassally: 'bar', pronunciation: 'bar', notes: 'contrast (Khazalid "bar")' },
-    'if': { ghassally: 'om', pronunciation: 'om', notes: 'conditional' },
-    'when': { ghassally: 'kvan', pronunciation: 'kvan', notes: 'temporal' },
-    'why': { ghassally: 'kvarfor', pronunciation: 'kvar-FOR', notes: 'reason (literally "what-for")' },
-    
-    // === NEGATION ===
-    'not': { ghassally: 'nai', pronunciation: 'nigh', notes: 'negation' },
-    'no': { ghassally: 'nai', pronunciation: 'nigh', notes: 'negative' },
-    'yes': { ghassally: 'ai', pronunciation: 'eye', notes: 'affirmative (Khazalid "ai")' },
-    
-    // === GNOME-SPECIFIC (root: gnom) ===
-    'gnome': { ghassally: 'gnomaz', pronunciation: 'GNOH-maz', notes: 'a gnome (-az = physical being)' },
-    'gnomes': { ghassally: 'gnomi', pronunciation: 'GNOH-mee', notes: 'gnomes (-i = plural)' },
-    'gnomish': { ghassally: 'gnomak', pronunciation: 'GNOH-mak', notes: 'gnomish (-ak = abstract concept)' },
-    'clan': { ghassally: 'throngaz', pronunciation: 'THROHN-gaz', notes: 'a clan (-az = specific group)' },
-    'clans': { ghassally: 'throngi', pronunciation: 'THROHN-gee', notes: 'clans (-i = plural)' },
-    
-    // === SHADOW & ILLUSION (Ulgu-themed, root: mhorn for shadow) ===
-    'shadow': { ghassally: 'mhornaz', pronunciation: 'MOR-naz', notes: 'a shadow (-az = physical thing)' },
-    'shadows': { ghassally: 'mhorni', pronunciation: 'MOR-nee', notes: 'shadows (-i = plural)' },
-    'hide': { ghassally: 'mhornit', pronunciation: 'MOR-nit', notes: 'to hide (-it = verb present)' },
-    'hiding': { ghassally: 'mhornit', pronunciation: 'MOR-nit', notes: 'hiding (same as present)' },
-    'hidden': { ghassally: 'mhorned', pronunciation: 'MOR-ned', notes: 'hidden (-ed = past participle)' },
-    'illusion': { ghassally: 'svellaz', pronunciation: 'SVELL-az', notes: 'an illusion (-az = thing)' },
-    'illusions': { ghassally: 'svelli', pronunciation: 'SVELL-ee', notes: 'illusions (-i = plural)' },
-    'trick': { ghassally: 'svellit', pronunciation: 'SVELL-it', notes: 'to trick (-it = verb)' },
-    'tricked': { ghassally: 'svelled', pronunciation: 'SVELL-ed', notes: 'tricked (-ed = past)' },
-    'trickster': { ghassally: 'svellazi', pronunciation: 'svell-AH-zee', notes: 'trickster (-az + -i = specific person type)' },
-    'mist': { ghassally: 'nebaz', pronunciation: 'NEH-baz', notes: 'mist (-az = thing)' },
-    'mists': { ghassally: 'nebi', pronunciation: 'NEH-bee', notes: 'mists (-i = plural)' },
-    
-    // === NATURE & ELEMENTS (root-based) ===
-    'fire': { ghassally: 'zharraz', pronunciation: 'ZHAR-raz', notes: 'fire (from Khazalid "zharr")' },
-    'stone': { ghassally: 'karaz', pronunciation: 'KAR-az', notes: 'a stone (from Khazalid "kar" = big stone)' },
-    'stones': { ghassally: 'kari', pronunciation: 'KAR-ee', notes: 'stones (-i = plural)' },
-    'mountain': { ghassally: 'karazz', pronunciation: 'kah-RAZZ', notes: 'mountain (Khazalid "karaz")' },
-    'mountains': { ghassally: 'karzi', pronunciation: 'KAR-zee', notes: 'mountains (-i = plural)' },
-    'water': { ghassally: 'aquaz', pronunciation: 'AH-kwaz', notes: 'water (-az = thing)' },
-    'wind': { ghassally: 'vindaz', pronunciation: 'VIN-daz', notes: 'wind (-az = thing)' },
-    'winds': { ghassally: 'vindi', pronunciation: 'VIN-dee', notes: 'winds (-i = plural)' },
-    'dark': { ghassally: 'dumbrak', pronunciation: 'DOOM-brak', notes: 'darkness (-ak = abstract concept)' },
-    'light': { ghassally: 'luccaz', pronunciation: 'LOO-kaz', notes: 'light (-az = thing)' },
-    'moon': { ghassally: 'lunaz', pronunciation: 'LOO-naz', notes: 'moon (-az = thing)' },
-    'star': { ghassally: 'stellaz', pronunciation: 'STELL-az', notes: 'star (-az = thing)' },
-    'stars': { ghassally: 'stelli', pronunciation: 'STELL-ee', notes: 'stars (-i = plural)' },
-    
-    // === DWARFS (root: daw, from Khazalid "dawi") ===
-    'dwarf': { ghassally: 'dawaz', pronunciation: 'DAH-waz', notes: 'a dwarf (Khazalid "dawi" + -az)' },
-    'dwarfs': { ghassally: 'dawi', pronunciation: 'DAH-wee', notes: 'dwarfs (Khazalid plural "dawi")' },
-    'dwarven': { ghassally: 'dawak', pronunciation: 'DAH-wak', notes: 'dwarven (-ak = abstract quality)' },
-    'cousin': { ghassally: 'kumaz', pronunciation: 'KOO-maz', notes: 'cousin (-az = specific relation)' },
-    'kin': { ghassally: 'kinaz', pronunciation: 'KIN-az', notes: 'kin (-az = physical relation)' },
-    'beard': { ghassally: 'tromaz', pronunciation: 'TROH-maz', notes: 'beard (from Khazalid "trom")' },
-    
-    // === COMMON VERBS (root + -it for present, -ed for past) ===
-    'see': { ghassally: 'okrit', pronunciation: 'OH-krit', notes: 'to see (-it = verb)' },
-    'saw': { ghassally: 'okred', pronunciation: 'OH-kred', notes: 'saw (-ed = past)' },
-    'walk': { ghassally: 'strolit', pronunciation: 'STROH-lit', notes: 'to walk (-it = verb)' },
-    'walked': { ghassally: 'stroled', pronunciation: 'STROH-led', notes: 'walked (-ed = past)' },
-    'go': { ghassally: 'git', pronunciation: 'git', notes: 'to go (Khazalid irregular "git")' },
-    'went': { ghassally: 'ged', pronunciation: 'ged', notes: 'went (Khazalid irregular "ged")' },
-    'come': { ghassally: 'komit', pronunciation: 'KOH-mit', notes: 'to come (-it = verb)' },
-    'make': { ghassally: 'makkit', pronunciation: 'MAH-kit', notes: 'to make (-it = verb)' },
-    'made': { ghassally: 'makked', pronunciation: 'MAH-ked', notes: 'made (-ed = past)' },
-    'use': { ghassally: 'brukkit', pronunciation: 'BRUK-kit', notes: 'to use (-it = verb)' },
-    'used': { ghassally: 'brukked', pronunciation: 'BRUK-ked', notes: 'used (-ed = past)' },
-    'know': { ghassally: 'gnorrit', pronunciation: 'GNOR-rit', notes: 'to know (-it = verb)' },
-    'knew': { ghassally: 'gnorred', pronunciation: 'GNOR-red', notes: 'knew (-ed = past)' },
-    'think': { ghassally: 'denkit', pronunciation: 'DEN-kit', notes: 'to think (-it = verb)' },
-    'speak': { ghassally: 'gassit', pronunciation: 'GAH-sit', notes: 'to speak (-it = verb)' },
-    'steal': { ghassally: 'skit', pronunciation: 'skit', notes: 'to steal (Khazalid "skit")' },
-    'stole': { ghassally: 'sked', pronunciation: 'sked', notes: 'stole (from ska root)' },
-    
-    // === MAGIC (root: magik) ===
-    'magic': { ghassally: 'magikaz', pronunciation: 'mah-GIK-az', notes: 'magic (-az = thing)' },
-    'spell': { ghassally: 'rhunaz', pronunciation: 'ROO-naz', notes: 'spell (from Khazalid "rhun" = rune)' },
-    'power': { ghassally: 'kraftaz', pronunciation: 'KRAF-taz', notes: 'power (-az = thing)' },
-    
-    // === PEOPLE & RACES ===
-    'human': { ghassally: 'umgaz', pronunciation: 'UM-gaz', notes: 'human (from Khazalid "umgi" + -az)' },
-    'humans': { ghassally: 'umgi', pronunciation: 'UM-gee', notes: 'humans (Khazalid "umgi")' },
-    'elf': { ghassally: 'elvaz', pronunciation: 'EL-vaz', notes: 'elf (-az = being)' },
-    'elves': { ghassally: 'elvi', pronunciation: 'EL-vee', notes: 'elves (-i = plural)' },
-    'orc': { ghassally: 'urkaz', pronunciation: 'UR-kaz', notes: 'orc (-az = being)' },
-    'orcs': { ghassally: 'urki', pronunciation: 'UR-kee', notes: 'orcs (-i = plural)' },
-    'goblin': { ghassally: 'grobiaz', pronunciation: 'GROH-bee-az', notes: 'goblin (from Khazalid "grobi")' },
-    'goblins': { ghassally: 'grobi', pronunciation: 'GROH-bee', notes: 'goblins (Khazalid "grobi")' },
-    
-    // === ADJECTIVES (root + -ak for abstract quality) ===
-    'good': { ghassally: 'grundak', pronunciation: 'GROON-dak', notes: 'good (-ak = quality)' },
-    'bad': { ghassally: 'umgak', pronunciation: 'UM-gak', notes: 'bad (Khazalid "umgak" = shoddy)' },
-    'best': { ghassally: 'grundazza', pronunciation: 'groon-DAH-zah', notes: 'best (superlative -azza)' },
-    'clever': { ghassally: 'gnolak', pronunciation: 'GNOH-lak', notes: 'clever (from Khazalid "gnol" = wise)' },
-    'wise': { ghassally: 'gnolak', pronunciation: 'GNOH-lak', notes: 'wise (Khazalid "gnol")' },
-    'strong': { ghassally: 'durak', pronunciation: 'DUH-rak', notes: 'strong (from Khazalid "dur" = hard stone)' },
-    'brave': { ghassally: 'galak', pronunciation: 'GAH-lak', notes: 'brave (-ak = quality)' },
-    'small': { ghassally: 'pikkak', pronunciation: 'PIK-kak', notes: 'small (-ak = quality)' },
-    'great': { ghassally: 'grungak', pronunciation: 'GROON-gak', notes: 'great (-ak = quality)' },
-    'old': { ghassally: 'gamak', pronunciation: 'GAM-ak', notes: 'old (-ak = quality)' },
-    'young': { ghassally: 'jungak', pronunciation: 'YOON-gak', notes: 'young (-ak = quality)' },
-    'new': { ghassally: 'nuvak', pronunciation: 'NOO-vak', notes: 'new (-ak = quality)' },
-    
-    // === COMMON NOUNS ===
-    'home': { ghassally: 'zakaz', pronunciation: 'ZAH-kaz', notes: 'home (from Khazalid "zak" = hut)' },
-    'king': { ghassally: 'rikaz', pronunciation: 'RIK-az', notes: 'king (Khazalid "rik")' },
-    'gold': { ghassally: 'goraz', pronunciation: 'GOR-az', notes: 'gold (from Khazalid "gor")' },
-    'friend': { ghassally: 'drengaz', pronunciation: 'DREN-gaz', notes: 'friend (-az = person)' },
-    'enemy': { ghassally: 'grimaz', pronunciation: 'GRIM-az', notes: 'enemy (from Khazalid "grim" = harsh)' },
-    'war': { ghassally: 'kazak', pronunciation: 'KAH-zak', notes: 'war (-ak = concept)' },
-    'name': { ghassally: 'namaz', pronunciation: 'NAH-maz', notes: 'name (-az = thing)' },
-    'names': { ghassally: 'nami', pronunciation: 'NAH-mee', notes: 'names (-i = plural)' },
-    'our': { ghassally: 'wen', pronunciation: 'wen', notes: 'our/we (possessive)' },
-    
-    // === NUMBERS ===
-    'one': { ghassally: 'uni', pronunciation: 'OO-nee', notes: 'one' },
-    'two': { ghassally: 'dua', pronunciation: 'DOO-ah', notes: 'two' },
-    'three': { ghassally: 'trei', pronunciation: 'tray', notes: 'three' },
-    'many': { ghassally: 'mangi', pronunciation: 'MAN-gee', notes: 'many' },
-    
-    // === TIME ===
-    'day': { ghassally: 'dagaz', pronunciation: 'DAH-gaz', notes: 'day (-az = thing)' },
-    'night': { ghassally: 'naktaz', pronunciation: 'NAK-taz', notes: 'night (-az = thing)' },
-  };
+        const GhassallyTranslator = () => {
+            const [input, setInput] = useState('');
+            const [currentPhrase, setCurrentPhrase] = useState(null);
+            const [showGrammarGuide, setShowGrammarGuide] = useState(false);
 
-  // Gnomish wisdom phrases
-  const gnomishPhrases = [
-    {
-      common: "The shadow hides what the light reveals.",
-      ghassally: "A mhornaz mhornit kva a luccaz okrit.",
-      pronunciation: "ah MOR-naz MOR-nit kvah ah LOO-kaz OH-krit",
-      context: "Ancient Gnommi proverb about illusion"
-    },
-    {
-      common: "Never trust a Dwarf's memory of a grudge.",
-      ghassally: "Nai gnorrit dawaz gamla grimaz.",
-      pronunciation: "nigh GNOR-rit DAH-waz GAM-lah GRIM-az",
-      context: "Common saying among the clans"
-    },
-    {
-      common: "In mist and shadow, we find our strength.",
-      ghassally: "A nebaz ok mhornaz, wen okrit kraftaz.",
-      pronunciation: "ah NEH-baz ok MOR-naz, wen OH-krit KRAF-taz",
-      context: "Traditional Glimdwarrow greeting"
-    },
-    {
-      common: "The Grey Wind knows our names.",
-      ghassally: "A vindaz dumbrak gnorrit wen nami.",
-      pronunciation: "ah VIN-daz DOOM-brak GNOR-rit wen NAH-mee",
-      context: "Acknowledgment of Gnomes' bond with Ulgu"
-    },
-    {
-      common: "Small stones can trip giants.",
-      ghassally: "Pikkak kari grimaz grungak urkaz.",
-      pronunciation: "PIK-kak KAR-ee GRIM-az GROON-gak UR-kaz",
-      context: "Gnomish wisdom about leveraging size"
-    },
-  ];
+            // Lexicon with proper Khazalid grammar
+            const lexicon = {
+                // Pronouns
+                'i': { ghassally: 'il', pronunciation: 'eel' },
+                'you': { ghassally: 'ut', pronunciation: 'oot' },
+                'we': { ghassally: 'wen', pronunciation: 'wen' },
+                'they': { ghassally: 'theyi', pronunciation: 'THAY-ee' },
+                'he': { ghassally: 'ul', pronunciation: 'ool' },
+                'she': { ghassally: 'ula', pronunciation: 'OO-lah' },
+                'it': { ghassally: 'iz', pronunciation: 'iz' },
+                
+                // Articles
+                'the': { ghassally: 'a', pronunciation: 'ah' },
+                'a': { ghassally: 'un', pronunciation: 'un' },
+                'an': { ghassally: 'un', pronunciation: 'un' },
+                
+                // To Be
+                'am': { ghassally: 'armi', pronunciation: 'AR-mee' },
+                'is': { ghassally: 'armi', pronunciation: 'AR-mee' },
+                'are': { ghassally: 'armi', pronunciation: 'AR-mee' },
+                'was': { ghassally: 'urzi', pronunciation: 'UR-zee' },
+                'were': { ghassally: 'urzi', pronunciation: 'UR-zee' },
+                'be': { ghassally: 'arma', pronunciation: 'AR-mah' },
+                
+                // Modals
+                'will': { ghassally: 'an', pronunciation: 'an' },
+                'would': { ghassally: 'voldi', pronunciation: 'VOL-dee' },
+                'can': { ghassally: 'kanni', pronunciation: 'KAN-nee' },
+                'could': { ghassally: 'kannid', pronunciation: 'KAN-nid' },
+                'have': { ghassally: 'havi', pronunciation: 'HAH-vee' },
+                'has': { ghassally: 'havi', pronunciation: 'HAH-vee' },
+                'had': { ghassally: 'havid', pronunciation: 'HAH-vid' },
+                
+                // Prepositions
+                'in': { ghassally: 'a', pronunciation: 'ah' },
+                'on': { ghassally: 'op', pronunciation: 'op' },
+                'at': { ghassally: 'at', pronunciation: 'at' },
+                'to': { ghassally: 'til', pronunciation: 'til' },
+                'for': { ghassally: 'for', pronunciation: 'for' },
+                'of': { ghassally: 'a', pronunciation: 'ah' },
+                'with': { ghassally: 'a', pronunciation: 'ah' },
+                'from': { ghassally: 'fra', pronunciation: 'frah' },
+                'by': { ghassally: 'bi', pronunciation: 'bee' },
+                
+                // Conjunctions
+                'and': { ghassally: 'ok', pronunciation: 'ok' },
+                'or': { ghassally: 'bar', pronunciation: 'bar' },
+                'but': { ghassally: 'bar', pronunciation: 'bar' },
+                'if': { ghassally: 'om', pronunciation: 'om' },
+                'when': { ghassally: 'kvan', pronunciation: 'kvan' },
+                'why': { ghassally: 'kvarfor', pronunciation: 'kvar-FOR' },
+                
+                // Negation
+                'not': { ghassally: 'nai', pronunciation: 'nigh' },
+                'no': { ghassally: 'nai', pronunciation: 'nigh' },
+                'yes': { ghassally: 'ai', pronunciation: 'eye' },
+                
+                // Gnome-specific
+                'gnome': { ghassally: 'gnomaz', pronunciation: 'GNOH-maz' },
+                'gnomes': { ghassally: 'gnomi', pronunciation: 'GNOH-mee' },
+                'clan': { ghassally: 'throngaz', pronunciation: 'THROHN-gaz' },
+                'clans': { ghassally: 'throngi', pronunciation: 'THROHN-gee' },
+                
+                // Shadow & Illusion
+                'shadow': { ghassally: 'mhornaz', pronunciation: 'MOR-naz' },
+                'shadows': { ghassally: 'mhorni', pronunciation: 'MOR-nee' },
+                'hide': { ghassally: 'mhornit', pronunciation: 'MOR-nit' },
+                'hidden': { ghassally: 'mhorned', pronunciation: 'MOR-ned' },
+                'illusion': { ghassally: 'svellaz', pronunciation: 'SVELL-az' },
+                'illusions': { ghassally: 'svelli', pronunciation: 'SVELL-ee' },
+                'trick': { ghassally: 'svellit', pronunciation: 'SVELL-it' },
+                'tricked': { ghassally: 'svelled', pronunciation: 'SVELL-ed' },
+                'trickster': { ghassally: 'svellazi', pronunciation: 'svell-AH-zee' },
+                'mist': { ghassally: 'nebaz', pronunciation: 'NEH-baz' },
+                
+                // Nature
+                'fire': { ghassally: 'zharraz', pronunciation: 'ZHAR-raz' },
+                'stone': { ghassally: 'karaz', pronunciation: 'KAR-az' },
+                'stones': { ghassally: 'kari', pronunciation: 'KAR-ee' },
+                'mountain': { ghassally: 'karazz', pronunciation: 'kah-RAZZ' },
+                'water': { ghassally: 'aquaz', pronunciation: 'AH-kwaz' },
+                'wind': { ghassally: 'vindaz', pronunciation: 'VIN-daz' },
+                'winds': { ghassally: 'vindi', pronunciation: 'VIN-dee' },
+                'dark': { ghassally: 'dumbrak', pronunciation: 'DOOM-brak' },
+                'light': { ghassally: 'luccaz', pronunciation: 'LOO-kaz' },
+                'moon': { ghassally: 'lunaz', pronunciation: 'LOO-naz' },
+                'star': { ghassally: 'stellaz', pronunciation: 'STELL-az' },
+                'stars': { ghassally: 'stelli', pronunciation: 'STELL-ee' },
+                
+                // Dwarfs
+                'dwarf': { ghassally: 'dawaz', pronunciation: 'DAH-waz' },
+                'dwarfs': { ghassally: 'dawi', pronunciation: 'DAH-wee' },
+                'cousin': { ghassally: 'kumaz', pronunciation: 'KOO-maz' },
+                'kin': { ghassally: 'kinaz', pronunciation: 'KIN-az' },
+                'beard': { ghassally: 'tromaz', pronunciation: 'TROH-maz' },
+                
+                // Verbs
+                'see': { ghassally: 'okrit', pronunciation: 'OH-krit' },
+                'saw': { ghassally: 'okred', pronunciation: 'OH-kred' },
+                'walk': { ghassally: 'strolit', pronunciation: 'STROH-lit' },
+                'go': { ghassally: 'git', pronunciation: 'git' },
+                'went': { ghassally: 'ged', pronunciation: 'ged' },
+                'come': { ghassally: 'komit', pronunciation: 'KOH-mit' },
+                'make': { ghassally: 'makkit', pronunciation: 'MAH-kit' },
+                'made': { ghassally: 'makked', pronunciation: 'MAH-ked' },
+                'use': { ghassally: 'brukkit', pronunciation: 'BRUK-kit' },
+                'used': { ghassally: 'brukked', pronunciation: 'BRUK-ked' },
+                'know': { ghassally: 'gnorrit', pronunciation: 'GNOR-rit' },
+                'knew': { ghassally: 'gnorred', pronunciation: 'GNOR-red' },
+                'think': { ghassally: 'denkit', pronunciation: 'DEN-kit' },
+                'speak': { ghassally: 'gassit', pronunciation: 'GAH-sit' },
+                'steal': { ghassally: 'skit', pronunciation: 'skit' },
+                
+                // Magic
+                'magic': { ghassally: 'magikaz', pronunciation: 'mah-GIK-az' },
+                'spell': { ghassally: 'rhunaz', pronunciation: 'ROO-naz' },
+                'power': { ghassally: 'kraftaz', pronunciation: 'KRAF-taz' },
+                
+                // People
+                'human': { ghassally: 'umgaz', pronunciation: 'UM-gaz' },
+                'humans': { ghassally: 'umgi', pronunciation: 'UM-gee' },
+                'elf': { ghassally: 'elvaz', pronunciation: 'EL-vaz' },
+                'elves': { ghassally: 'elvi', pronunciation: 'EL-vee' },
+                'orc': { ghassally: 'urkaz', pronunciation: 'UR-kaz' },
+                'goblin': { ghassally: 'grobiaz', pronunciation: 'GROH-bee-az' },
+                
+                // Adjectives
+                'good': { ghassally: 'grundak', pronunciation: 'GROON-dak' },
+                'bad': { ghassally: 'umgak', pronunciation: 'UM-gak' },
+                'best': { ghassally: 'grundazza', pronunciation: 'groon-DAH-zah' },
+                'clever': { ghassally: 'gnolak', pronunciation: 'GNOH-lak' },
+                'wise': { ghassally: 'gnolak', pronunciation: 'GNOH-lak' },
+                'strong': { ghassally: 'durak', pronunciation: 'DUH-rak' },
+                'brave': { ghassally: 'galak', pronunciation: 'GAH-lak' },
+                'small': { ghassally: 'pikkak', pronunciation: 'PIK-kak' },
+                'great': { ghassally: 'grungak', pronunciation: 'GROON-gak' },
+                'old': { ghassally: 'gamak', pronunciation: 'GAM-ak' },
+                'young': { ghassally: 'jungak', pronunciation: 'YOON-gak' },
+                'new': { ghassally: 'nuvak', pronunciation: 'NOO-vak' },
+                
+                // Common nouns
+                'home': { ghassally: 'zakaz', pronunciation: 'ZAH-kaz' },
+                'king': { ghassally: 'rikaz', pronunciation: 'RIK-az' },
+                'gold': { ghassally: 'goraz', pronunciation: 'GOR-az' },
+                'friend': { ghassally: 'drengaz', pronunciation: 'DREN-gaz' },
+                'enemy': { ghassally: 'grimaz', pronunciation: 'GRIM-az' },
+                'war': { ghassally: 'kazak', pronunciation: 'KAH-zak' },
+                'name': { ghassally: 'namaz', pronunciation: 'NAH-maz' },
+                'names': { ghassally: 'nami', pronunciation: 'NAH-mee' },
+                'our': { ghassally: 'wen', pronunciation: 'wen' },
+                
+                // Numbers
+                'one': { ghassally: 'uni', pronunciation: 'OO-nee' },
+                'two': { ghassally: 'dua', pronunciation: 'DOO-ah' },
+                'three': { ghassally: 'trei', pronunciation: 'tray' },
+                'many': { ghassally: 'mangi', pronunciation: 'MAN-gee' },
+            };
 
-  // Get random phrase
-  const getRandomPhrase = () => {
-    const randomIndex = Math.floor(Math.random() * gnomishPhrases.length);
-    setCurrentPhrase(gnomishPhrases[randomIndex]);
-  };
+            const gnomishPhrases = [
+                {
+                    common: "The shadow hides what the light reveals.",
+                    ghassally: "A mhornaz mhornit kva a luccaz okrit.",
+                    pronunciation: "ah MOR-naz MOR-nit kvah ah LOO-kaz OH-krit",
+                    context: "Ancient Gnommi proverb about illusion"
+                },
+                {
+                    common: "Never trust a Dwarf's memory of a grudge.",
+                    ghassally: "Nai gnorrit dawaz gamla grimaz.",
+                    pronunciation: "nigh GNOR-rit DAH-waz GAM-lah GRIM-az",
+                    context: "Common saying among the clans"
+                },
+                {
+                    common: "In mist and shadow, we find our strength.",
+                    ghassally: "A nebaz ok mhornaz, wen okrit kraftaz.",
+                    pronunciation: "ah NEH-baz ok MOR-naz, wen OH-krit KRAF-taz",
+                    context: "Traditional Glimdwarrow greeting"
+                },
+                {
+                    common: "The Grey Wind knows our names.",
+                    ghassally: "A vindaz dumbrak gnorrit wen nami.",
+                    pronunciation: "ah VIN-daz DOOM-brak GNOR-rit wen NAH-mee",
+                    context: "Acknowledgment of Gnomes' bond with Ulgu"
+                },
+                {
+                    common: "Small stones can trip giants.",
+                    ghassally: "Pikkak kari grimaz grungak urkaz.",
+                    pronunciation: "PIK-kak KAR-ee GRIM-az GROON-gak UR-kaz",
+                    context: "Gnomish wisdom about leveraging size"
+                },
+            ];
 
-  React.useEffect(() => {
-    getRandomPhrase();
-  }, []);
+            const getRandomPhrase = () => {
+                const randomIndex = Math.floor(Math.random() * gnomishPhrases.length);
+                setCurrentPhrase(gnomishPhrases[randomIndex]);
+            };
 
-  // Apply Ghassally-specific signifiers following Khazalid rules
-  const applySignifiers = (root, type) => {
-    const lastChar = root.slice(-1);
-    const needsConnector = ['a', 'e', 'i', 'o', 'u', 'l', 'r'].includes(lastChar);
-    
-    switch(type) {
-      case 'plural': // -i
-        return needsConnector ? root + 'i' : root + 'i';
-      case 'physical': // -az
-        return needsConnector ? root + 'gaz' : root + 'az';
-      case 'abstract': // -ak
-        return needsConnector ? root + 'gak' : root + 'ak';
-      case 'verb': // -it
-        return needsConnector ? root + 'kit' : root + 'it';
-      case 'past': // -ed
-        return needsConnector ? root + 'ked' : root + 'ed';
-      default:
-        return root;
-    }
-  };
+            useEffect(() => {
+                getRandomPhrase();
+            }, []);
 
-  const translateWord = (word) => {
-    const lowerWord = word.toLowerCase().trim();
-    
-    // Direct match
-    if (lexicon[lowerWord]) {
-      return {
-        translation: lexicon[lowerWord].ghassally,
-        pronunciation: lexicon[lowerWord].pronunciation
-      };
-    }
-    
-    // Auto-generate plurals (-s ending → add -i)
-    if (lowerWord.endsWith('s') && lowerWord.length > 2) {
-      const singular = lowerWord.slice(0, -1);
-      if (lexicon[singular]) {
-        const root = lexicon[singular].ghassally.replace(/(az|ak|it)$/, '');
-        return {
-          translation: root + 'i',
-          pronunciation: lexicon[singular].pronunciation.replace(/[A-Z-]+$/, match => match + '-ee')
-        };
-      }
-    }
-    
-    // Auto-generate verb forms (-ing, -ed)
-    if (lowerWord.endsWith('ing')) {
-      const base = lowerWord.slice(0, -3);
-      if (lexicon[base]) {
-        return {
-          translation: lexicon[base].ghassally,
-          pronunciation: lexicon[base].pronunciation
-        };
-      }
-    }
-    
-    // Return as-is with notation
-    return {
-      translation: lowerWord,
-      pronunciation: '(unknown)'
-    };
-  };
+            const translateWord = (word) => {
+                const lowerWord = word.toLowerCase().trim();
+                
+                if (lexicon[lowerWord]) {
+                    return {
+                        translation: lexicon[lowerWord].ghassally,
+                        pronunciation: lexicon[lowerWord].pronunciation
+                    };
+                }
+                
+                // Auto-generate plurals
+                if (lowerWord.endsWith('s') && lowerWord.length > 2) {
+                    const singular = lowerWord.slice(0, -1);
+                    if (lexicon[singular]) {
+                        const root = lexicon[singular].ghassally.replace(/(az|ak|it)$/, '');
+                        return {
+                            translation: root + 'i',
+                            pronunciation: lexicon[singular].pronunciation + '-ee'
+                        };
+                    }
+                }
+                
+                // Auto-generate verb forms
+                if (lowerWord.endsWith('ing')) {
+                    const base = lowerWord.slice(0, -3);
+                    if (lexicon[base]) {
+                        return {
+                            translation: lexicon[base].ghassally,
+                            pronunciation: lexicon[base].pronunciation
+                        };
+                    }
+                }
+                
+                return {
+                    translation: lowerWord,
+                    pronunciation: '(unknown)'
+                };
+            };
 
-  const translateSentence = (text) => {
-    const words = text.toLowerCase().split(/\s+/);
-    const translations = [];
-    const pronunciations = [];
-    
-    words.forEach(word => {
-      const cleanWord = word.replace(/[.,!?;:]/g, '');
-      const result = translateWord(cleanWord);
-      const punctuation = word.match(/[.,!?;:]$/);
-      const finalWord = punctuation ? result.translation + punctuation[0] : result.translation;
-      
-      translations.push(finalWord);
-      pronunciations.push(result.pronunciation);
-    });
-    
-    return {
-      translation: translations.join(' '),
-      pronunciation: pronunciations.join(' ')
-    };
-  };
+            const translateSentence = (text) => {
+                const words = text.toLowerCase().split(/\s+/);
+                const translations = [];
+                const pronunciations = [];
+                
+                words.forEach(word => {
+                    const cleanWord = word.replace(/[.,!?;:]/g, '');
+                    const result = translateWord(cleanWord);
+                    const punctuation = word.match(/[.,!?;:]$/);
+                    const finalWord = punctuation ? result.translation + punctuation[0] : result.translation;
+                    
+                    translations.push(finalWord);
+                    pronunciations.push(result.pronunciation);
+                });
+                
+                return {
+                    translation: translations.join(' '),
+                    pronunciation: pronunciations.join(' ')
+                };
+            };
 
-  // Format pronunciation with colored stressed syllables
-  const formatPronunciation = (pronunciation) => {
-    if (!pronunciation) return null;
-    
-    const parts = pronunciation.split(' ');
-    return parts.map((part, idx) => {
-      // Match capitalized portions (stressed syllables)
-      const segments = part.split(/([A-Z][A-Z-]*)/g).filter(Boolean);
-      
-      return (
-        <span key={idx} className="inline-block mr-2">
-          {segments.map((seg, segIdx) => {
-            // If segment is all caps, it's stressed
-            if (/^[A-Z][A-Z-]*$/.test(seg)) {
-              return (
-                <span key={segIdx} className="text-amber-300 font-semibold">
-                  {seg}
-                </span>
-              );
-            }
-            return <span key={segIdx} className="text-slate-400">{seg}</span>;
-          })}
-        </span>
-      );
-    });
-  };
+            const formatPronunciation = (pronunciation) => {
+                if (!pronunciation) return null;
+                
+                const parts = pronunciation.split(' ');
+                return parts.map((part, idx) => {
+                    const segments = part.split(/([A-Z][A-Z-]*)/g).filter(Boolean);
+                    
+                    return React.createElement('span', { key: idx, className: 'inline-block mr-2' },
+                        segments.map((seg, segIdx) => {
+                            if (/^[A-Z][A-Z-]*$/.test(seg)) {
+                                return React.createElement('span', { key: segIdx, className: 'text-amber-300 font-semibold' }, seg);
+                            }
+                            return React.createElement('span', { key: segIdx, className: 'text-slate-400' }, seg);
+                        })
+                    );
+                });
+            };
 
-  // Format Ghassally text with stress accents based on pronunciation
-  const formatGhassally = (translation, pronunciation) => {
-    if (!translation || !pronunciation) return translation;
-    
-    const transWords = translation.split(' ');
-    const pronWords = pronunciation.split(' ');
-    
-    return transWords.map((word, idx) => {
-      const pron = pronWords[idx];
-      if (!pron || pron === '(unknown)' || pron === '(constructed)' || pron === '(approximation)') {
-        return <span key={idx} className="mr-2">{word}</span>;
-      }
-      
-      // Clean the word (remove punctuation)
-      const cleanWord = word.replace(/[.,!?;:]$/, '');
-      const punctuation = word.match(/[.,!?;:]$/)?.[0] || '';
-      const wordLower = cleanWord.toLowerCase();
-      
-      // Find ALL stressed syllables from pronunciation (all capitalized parts)
-      const stressMatches = pron.match(/[A-Z][A-Z-]*/g);
-      if (!stressMatches || stressMatches.length === 0) {
-        return <span key={idx} className="mr-2">{cleanWord}{punctuation}</span>;
-      }
-      
-      // Phonetic to spelling map
-      const phonemeMap = {
-        'gnoh': 'gno', 'mhor': 'mhor', 'mor': 'mhor', 'svell': 'svell',
-        'dah': 'da', 'ar': 'ar', 'groon': 'grun', 'kvar': 'kvar',
-        'ah': 'a', 'bruk': 'bruk', 'zhar': 'zhar', 'gik': 'gik',
-        'eel': 'il', 'duh': 'du', 'gnoh': 'gno', 'oo': 'u',
-        'koh': 'ko', 'mah': 'ma', 'gah': 'ga', 'nigh': 'nai',
-        'loo': 'lu', 'kra': 'kra', 'vin': 'vin', 'neh': 'ne',
-        'stell': 'stell', 'kar': 'kar', 'rik': 'rik', 'gor': 'gor',
-        'dren': 'dren', 'grim': 'grim', 'kah': 'ka', 'pik': 'pik',
-        'yoon': 'yun', 'noo': 'nu', 'gam': 'gam', 'um': 'um',
-        'el': 'el', 'ur': 'ur', 'groh': 'gro', 'roo': 'ru',
-      };
-      
-      // Find all stress positions in the word
-      const stressPositions = [];
-      
-      for (const stressMatch of stressMatches) {
-        const stress = stressMatch.toLowerCase().replace(/-/g, '');
-        
-        // Try direct match first
-        let pos = wordLower.indexOf(stress);
-        if (pos !== -1) {
-          stressPositions.push({ start: pos, length: stress.length });
-          continue;
-        }
-        
-        // Try phoneme mapping
-        let found = false;
-        for (const [sound, spelling] of Object.entries(phonemeMap)) {
-          if (stress.startsWith(sound) || stress === sound) {
-            pos = wordLower.indexOf(spelling);
-            if (pos !== -1) {
-              stressPositions.push({ start: pos, length: spelling.length });
-              found = true;
-              break;
-            }
-          }
-        }
-        
-        // If still not found, try first 2-3 characters
-        if (!found && stress.length >= 2) {
-          const partial = stress.substring(0, Math.min(3, stress.length));
-          pos = wordLower.indexOf(partial);
-          if (pos !== -1) {
-            stressPositions.push({ start: pos, length: partial.length });
-          }
-        }
-      }
-      
-      // If no stress positions found, return word as-is
-      if (stressPositions.length === 0) {
-        return <span key={idx} className="mr-2">{cleanWord}{punctuation}</span>;
-      }
-      
-      // Sort stress positions and merge overlapping ones
-      stressPositions.sort((a, b) => a.start - b.start);
-      const merged = [stressPositions[0]];
-      for (let i = 1; i < stressPositions.length; i++) {
-        const last = merged[merged.length - 1];
-        const current = stressPositions[i];
-        if (current.start <= last.start + last.length) {
-          // Merge overlapping
-          last.length = Math.max(last.length, current.start + current.length - last.start);
-        } else {
-          merged.push(current);
-        }
-      }
-      
-      // Build the formatted word with multiple stress highlights
-      const parts = [];
-      let lastPos = 0;
-      
-      merged.forEach((stress, stressIdx) => {
-        // Unstressed part before
-        if (stress.start > lastPos) {
-          parts.push(
-            <span key={`u${stressIdx}`} className="text-amber-100/70">
-              {cleanWord.slice(lastPos, stress.start)}
-            </span>
-          );
-        }
-        // Stressed part
-        parts.push(
-          <span key={`s${stressIdx}`} className="text-amber-200 font-semibold">
-            {cleanWord.slice(stress.start, stress.start + stress.length)}
-          </span>
-        );
-        lastPos = stress.start + stress.length;
-      });
-      
-      // Remaining unstressed part
-      if (lastPos < cleanWord.length) {
-        parts.push(
-          <span key="end" className="text-amber-100/70">
-            {cleanWord.slice(lastPos)}
-          </span>
-        );
-      }
-      
-      return (
-        <span key={idx} className="mr-2">
-          {parts}
-          {punctuation}
-        </span>
-      );
-    });
-  };
+            const formatGhassally = (translation, pronunciation) => {
+                if (!translation || !pronunciation) return translation;
+                
+                const transWords = translation.split(' ');
+                const pronWords = pronunciation.split(' ');
+                
+                return transWords.map((word, idx) => {
+                    const pron = pronWords[idx];
+                    if (!pron || pron === '(unknown)') {
+                        return React.createElement('span', { key: idx, className: 'mr-2' }, word);
+                    }
+                    
+                    const cleanWord = word.replace(/[.,!?;:]$/, '');
+                    const punctuation = word.match(/[.,!?;:]$/)?.[0] || '';
+                    const wordLower = cleanWord.toLowerCase();
+                    
+                    const stressMatches = pron.match(/[A-Z][A-Z-]*/g);
+                    if (!stressMatches) {
+                        return React.createElement('span', { key: idx, className: 'mr-2' }, word);
+                    }
+                    
+                    const phonemeMap = {
+                        'gnoh': 'gno', 'mhor': 'mhor', 'svell': 'svell', 'dah': 'da',
+                        'ar': 'ar', 'groon': 'grun', 'bruk': 'bruk', 'zhar': 'zhar',
+                        'eel': 'il', 'duh': 'du', 'kvar': 'kvar', 'ah': 'a',
+                        'vin': 'vin', 'doom': 'dumb', 'gnor': 'gnor', 'nah': 'na',
+                    };
+                    
+                    let stressIndex = -1;
+                    let stressLength = 0;
+                    const primaryStress = stressMatches[0].toLowerCase().replace(/-/g, '');
+                    
+                    stressIndex = wordLower.indexOf(primaryStress);
+                    if (stressIndex !== -1) {
+                        stressLength = primaryStress.length;
+                    } else {
+                        for (const [sound, spelling] of Object.entries(phonemeMap)) {
+                            if (primaryStress.startsWith(sound)) {
+                                stressIndex = wordLower.indexOf(spelling);
+                                if (stressIndex !== -1) {
+                                    stressLength = spelling.length;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (stressIndex !== -1 && stressLength > 0) {
+                        const before = cleanWord.slice(0, stressIndex);
+                        const stressed = cleanWord.slice(stressIndex, stressIndex + stressLength);
+                        const after = cleanWord.slice(stressIndex + stressLength);
+                        
+                        return React.createElement('span', { key: idx, className: 'mr-2' },
+                            React.createElement('span', { className: 'text-amber-100/70' }, before),
+                            React.createElement('span', { className: 'text-amber-200 font-semibold' }, stressed),
+                            React.createElement('span', { className: 'text-amber-100/70' }, after),
+                            punctuation
+                        );
+                    }
+                    
+                    return React.createElement('span', { key: idx, className: 'mr-2' }, word);
+                });
+            };
 
-  const handleTranslate = () => {
-    getRandomPhrase();
-  };
+            const liveResult = input.trim() ? translateSentence(input) : { translation: '', pronunciation: '' };
 
-  const handleClear = () => {
-    setInput('');
-  };
+            return React.createElement('div', { className: 'min-h-screen bg-gradient-to-br from-slate-800 via-slate-700 to-stone-700 p-6' },
+                React.createElement('div', { className: 'max-w-6xl mx-auto' },
+                    // Header
+                    React.createElement('div', { className: 'text-center mb-8' },
+                        React.createElement('h1', { className: 'text-4xl font-bold text-amber-400 mb-2' }, 'Ghassally Translator'),
+                        React.createElement('p', { className: 'text-slate-300 italic' }, 'Gnomish Dialect of Khazalid'),
+                        React.createElement('p', { className: 'text-sm text-slate-400 mt-2' }, 'Grammar-accurate translation following Khazalid signifier rules')
+                    ),
 
-  const liveResult = input.trim() ? translateSentence(input) : { translation: '', pronunciation: '' };
+                    // Gnomish Phrase
+                    currentPhrase && React.createElement('div', { className: 'bg-gradient-to-r from-slate-900 to-slate-800 rounded-lg shadow-xl p-6 mb-6 border border-amber-900/30' },
+                        React.createElement('div', { className: 'flex items-start gap-3' },
+                            React.createElement('div', { className: 'text-amber-500 text-2xl mt-1' }, '✦'),
+                            React.createElement('div', { className: 'flex-1' },
+                                React.createElement('h3', { className: 'text-amber-300 font-semibold mb-3 text-sm uppercase tracking-wide' }, 'Gnomish Wisdom'),
+                                React.createElement('p', { className: 'text-slate-300 italic mb-2' }, `"${currentPhrase.common}"`),
+                                React.createElement('p', { className: 'text-amber-100 font-serif text-lg mb-2' }, currentPhrase.ghassally),
+                                React.createElement('p', { className: 'text-slate-400 text-sm font-mono mb-3' }, currentPhrase.pronunciation),
+                                React.createElement('p', { className: 'text-slate-500 text-xs italic' }, `— ${currentPhrase.context}`)
+                            ),
+                            React.createElement('div', { className: 'text-amber-500 text-2xl mt-1' }, '✦')
+                        )
+                    ),
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-800 via-slate-700 to-stone-700 p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-amber-400 mb-2">Ghassally Translator</h1>
-          <p className="text-slate-300 italic">Gnomish Dialect of Khazalid</p>
-          <p className="text-sm text-slate-400 mt-2">
-            Grammar-accurate translation following Khazalid signifier rules
-          </p>
-          <button
-            onClick={() => setShowGrammarGuide(!showGrammarGuide)}
-            className="mt-3 text-amber-300 hover:text-amber-200 text-sm flex items-center gap-2 mx-auto"
-          >
-            <BookOpen size={16} />
-            {showGrammarGuide ? 'Hide' : 'Show'} Grammar Guide
-          </button>
-        </div>
+                    // Translation Panel
+                    React.createElement('div', { className: 'bg-slate-900 rounded-lg shadow-xl p-6 mb-6' },
+                        React.createElement('div', { className: 'grid md:grid-cols-2 gap-6' },
+                            // Input
+                            React.createElement('div', null,
+                                React.createElement('label', { className: 'block text-amber-300 font-semibold mb-2' }, 'Reikspiel (Common)'),
+                                React.createElement('textarea', {
+                                    value: input,
+                                    onChange: (e) => setInput(e.target.value),
+                                    placeholder: 'Type to translate...',
+                                    className: 'w-full h-48 p-4 bg-slate-800 text-slate-100 border border-slate-600 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none'
+                                })
+                            ),
+                            // Output
+                            React.createElement('div', null,
+                                React.createElement('label', { className: 'block text-amber-300 font-semibold mb-2' }, 'Ghassally (Gnomish)'),
+                                React.createElement('div', { className: 'w-full h-48 p-4 bg-slate-800 rounded-lg border border-amber-900/30 overflow-y-auto' },
+                                    liveResult.translation ?
+                                        React.createElement('p', { className: 'text-amber-100 text-lg font-serif leading-relaxed' },
+                                            formatGhassally(liveResult.translation, liveResult.pronunciation)
+                                        ) :
+                                        React.createElement('p', { className: 'text-slate-500 italic' }, 'Translation will appear here...')
+                                )
+                            )
+                        )
+                    ),
 
-        {/* Grammar Guide */}
-        {showGrammarGuide && (
-          <div className="bg-slate-900 rounded-lg shadow-xl p-6 mb-6 border border-amber-900/30">
-            <h2 className="text-xl font-bold text-amber-300 mb-4">Khazalid Grammar in Ghassally</h2>
-            <div className="grid md:grid-cols-2 gap-6 text-sm text-slate-300">
-              <div>
-                <h3 className="font-semibold text-amber-400 mb-2">Signifiers</h3>
-                <ul className="space-y-2">
-                  <li><span className="text-amber-200">-az</span> = physical thing/place (stone → karaz)</li>
-                  <li><span className="text-amber-200">-ak</span> = abstract concept (good → grundak)</li>
-                  <li><span className="text-amber-200">-it</span> = verb present (hide → mhornit)</li>
-                  <li><span className="text-amber-200">-ed</span> = verb past (hidden → mhorned)</li>
-                  <li><span className="text-amber-200">-i</span> = plural (gnomes → gnomi)</li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="font-semibold text-amber-400 mb-2">Key Differences from Khazalid</h3>
-                <ul className="space-y-2">
-                  <li>• Softer consonants (kh → g, harsh → gentle)</li>
-                  <li>• More vowel sounds (-azza vs -az)</li>
-                  <li>• Shadow/illusion vocabulary unique to Gnomes</li>
-                  <li>• Same root + signifier structure</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
+                    // Pronunciation Guide
+                    liveResult.pronunciation && React.createElement('div', { className: 'bg-slate-900 rounded-lg shadow-xl p-6 mb-6' },
+                        React.createElement('label', { className: 'block text-amber-300 font-semibold mb-2' }, 'Pronunciation Guide:'),
+                        React.createElement('div', { className: 'p-4 bg-slate-800 rounded-lg border border-amber-900/30' },
+                            React.createElement('p', { className: 'text-lg leading-relaxed font-mono' },
+                                formatPronunciation(liveResult.pronunciation)
+                            )
+                        ),
+                        React.createElement('div', { className: 'mt-4 text-sm text-slate-400 space-y-1' },
+                            React.createElement('p', null, '• ', React.createElement('span', { className: 'text-amber-300 font-semibold' }, 'Highlighted syllables'), ' are stressed'),
+                            React.createElement('p', null, '• \'zh\' = like \'s\' in "measure"'),
+                            React.createElement('p', null, '• \'gn\' = soft \'n\' sound (like Italian "gnocchi")'),
+                            React.createElement('p', null, '• Roll your R\'s slightly for authenticity')
+                        )
+                    ),
 
-        {/* Gnomish Phrase */}
-        {currentPhrase && (
-          <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-lg shadow-xl p-6 mb-6 border border-amber-900/30">
-            <div className="flex items-start gap-3">
-              <div className="text-amber-500 text-2xl mt-1">✦</div>
-              <div className="flex-1">
-                <h3 className="text-amber-300 font-semibold mb-3 text-sm uppercase tracking-wide">
-                  Gnomish Wisdom
-                </h3>
-                <p className="text-slate-300 italic mb-2">"{currentPhrase.common}"</p>
-                <p className="text-amber-100 font-serif text-lg mb-2">{currentPhrase.ghassally}</p>
-                <p className="text-slate-400 text-sm font-mono mb-3">{currentPhrase.pronunciation}</p>
-                <p className="text-slate-500 text-xs italic">— {currentPhrase.context}</p>
-              </div>
-              <div className="text-amber-500 text-2xl mt-1">✦</div>
-            </div>
-          </div>
-        )}
-
-        {/* Translation Panel */}
-        <div className="bg-slate-900 rounded-lg shadow-xl p-6 mb-6">
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-amber-300 font-semibold">Reikspiel (Common)</label>
-                {input && (
-                  <button onClick={handleClear} className="text-slate-400 hover:text-slate-300 text-sm flex items-center gap-1">
-                    <RefreshCw size={14} />
-                    Clear
-                  </button>
-                )}
-              </div>
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Type to translate..."
-                className="w-full h-48 p-4 bg-slate-800 text-slate-100 border border-slate-600 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-amber-300 font-semibold">Ghassally (Gnomish)</label>
-                <button
-                  onClick={handleTranslate}
-                  className="text-amber-400 hover:text-amber-300 text-sm flex items-center gap-1"
-                  title="Get new wisdom phrase"
-                >
-                  <Search size={14} />
-                  New Phrase
-                </button>
-              </div>
-              <div className="w-full h-48 p-4 bg-slate-800 rounded-lg border border-amber-900/30 overflow-y-auto">
-                {liveResult.translation ? (
-                  <p className="text-amber-100 text-lg font-serif leading-relaxed">
-                    {formatGhassally(liveResult.translation, liveResult.pronunciation)}
-                  </p>
-                ) : (
-                  <p className="text-slate-500 italic">Translation will appear here...</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Pronunciation Guide */}
-        {liveResult.pronunciation && (
-          <div className="bg-slate-900 rounded-lg shadow-xl p-6 mb-6">
-            <label className="block text-amber-300 font-semibold mb-2 flex items-center gap-2">
-              <Volume2 size={20} />
-              Pronunciation Guide:
-            </label>
-            <div className="p-4 bg-slate-800 rounded-lg border border-amber-900/30">
-              <p className="text-lg leading-relaxed font-mono">
-                {formatPronunciation(liveResult.pronunciation)}
-              </p>
-            </div>
-            <div className="mt-4 text-sm text-slate-400 space-y-1">
-              <p>• <span className="text-amber-300 font-semibold">Highlighted syllables</span> are stressed</p>
-              <p>• 'zh' = like 's' in "measure"</p>
-              <p>• 'gn' = soft 'n' sound (like Italian "gnocchi")</p>
-              <p>• Roll your R's slightly for authenticity</p>
-            </div>
-          </div>
-        )}
-
-        {/* Quick Reference */}
-        <div className="bg-slate-900 rounded-lg shadow-xl p-6">
-          <h2 className="text-xl font-bold text-amber-300 mb-4">Quick Reference</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-            <div>
-              <span className="text-slate-400">Gnome:</span>
-              <span className="text-amber-100 ml-2 font-semibold">gnomaz</span>
-            </div>
-            <div>
-              <span className="text-slate-400">Shadow:</span>
-              <span className="text-amber-100 ml-2 font-semibold">mhornaz</span>
-            </div>
-            <div>
-              <span className="text-slate-400">To hide:</span>
-              <span className="text-amber-100 ml-2 font-semibold">mhornit</span>
-            </div>
-            <div>
-              <span className="text-slate-400">Illusion:</span>
-              <span className="text-amber-100 ml-2 font-semibold">svellaz</span>
-            </div>
-            <div>
-              <span className="text-slate-400">Clever:</span>
-              <span className="text-amber-100 ml-2 font-semibold">gnolak</span>
-            </div>
-            <div>
-              <span className="text-slate-400">Dwarf:</span>
-              <span className="text-amber-100 ml-2 font-semibold">dawaz</span>
-            </div>
-          </div>
-          
-          <div className="mt-6 p-4 bg-slate-800 rounded-lg border-l-4 border-amber-600">
-            <p className="text-slate-300 text-sm">
-              <strong className="text-amber-400">Grammar Note:</strong> Ghassally follows Khazalid's root + signifier structure. 
-              Use <span className="text-amber-200">-az</span> for physical things, <span className="text-amber-200">-ak</span> for 
-              abstract concepts, <span className="text-amber-200">-it</span> for verbs, <span className="text-amber-200">-i</span> for 
-              plurals. The dialect softens harsh Khazalid sounds while adding vocabulary for shadows and illusions.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default GhassallyTranslator;
+                    // Quick Reference
+                    React.createElement('div', { className: 'bg-slate-900 rounded-lg shadow-xl p-6' },
+                        React.createElement('h2', { className: 'text-xl font-bold text-amber-300 mb-4' }, 'Quick Reference'),
+                        React.createElement('div', { className: 'grid grid-cols-2 md:grid-cols-3 gap-4 text-sm' },
+                            React.createElement('div', null,
+                                React.createElement('span', { className: 'text-slate-400' }, 'Gnome: '),
+                                React.createElement('span', { className: 'text-amber-100 ml-2 font-semibold' }, 'gnomaz')
+                            ),
+                            React.createElement('div', null,
+                                React.createElement('span', { className: 'text-slate-400' }, 'Shadow: '),
+                                React.createElement('span', { className: 'text-amber-100 ml-2 font-semibold' }, 'mhornaz')
+                            ),
+                            React.createElement('div', null,
+                                React.createElement('span', { className: 'text-slate-400' }, 'To hide: '),
+                                React.createElement('span', { className: 'text-amber-100 ml-2 font-semibold' }, 'mhornit')
+                            ),
+                            React.createElement('div', null,
+                                React.createElement('span', { className: 'text-slate-400' }, 'Illusion: '),
+                                React.createElement('span', { className: 'text-amber-100 ml-2 font-semibold' }, 'svellaz')
+                            ),
+                            React.createElement('div', null,
+                                React.createElement('span', { className: 'text-slate-400' }, 'Clever: '),
+                                React.createElement('span', { className: 'text-amber-100 ml-2 font-semibold' }, 'gnolak')
+                            ),
+                            React.createElement('div', null,
+                                React.createElement('span', { className: 'text-slate-400' }, 'Dwarf: '),
+                                React.createElement('span', { className: 'text-amber-100 ml-2 font-semibold' }, 'dawaz')
+                            )
+                        ),
+                        React.createElement('div', { className: 'mt-6 p-4 bg-slate-800 rounded-lg border-l-4 border-amber-600' },
+                            React.createElement('p', { className: 'text-slate-300 text-sm' },
+                                React.createElement('strong', { className: 'text-amber-400' }, 'Grammar Note: '),
+                                'Ghassally follows Khazalid\'s root + signifier structure. Use ',
+                                React.createElement('span', { className: 'text
